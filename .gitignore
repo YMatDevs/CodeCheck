@@ -1,0 +1,5 @@
+*.txt
+server/node_modules/*
+
+
+.env

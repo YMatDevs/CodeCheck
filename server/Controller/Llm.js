@@ -8,9 +8,9 @@ dotenv.config();
 const API_KEY = process.env.GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY);
 
-async function CodeAnalysis(filePath) {
+async function CodeAnalysis(fileContent) {
 
-    const fileContent = readFileSync(filePath, 'utf-8');
+    // const fileContent = file.buffer;
 
     const query = `
   Analyze the following code.
@@ -36,7 +36,7 @@ async function CodeAnalysis(filePath) {
 
     const result = await model.generateContent(query);
 
-    console.log("Output: ");
+    // console.log("Output: ");
 
     const textResult = result.response.text();
     const cleanResult = textResult.replace(/```json\n|```/g, '').trim();

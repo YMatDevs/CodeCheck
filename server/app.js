@@ -7,6 +7,7 @@ import fs, { readFileSync } from 'fs';
 
 // Importing Controllers
 import llmController from './Controller/Llm.js';
+import { buffer } from 'stream/consumers';
 
 dotenv.config();
 
@@ -23,11 +24,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 
-const config = multer.diskStorage({
-    destination: function (req, file, callback) { callback(null, 'uploads/'); },
-    filename: function (req, file, callback) { callback(null, file.originalname + '-' + Date.now() + path.extname(file.originalname)) }
-})
-const upload = multer({ storage: config })
+// const config = multer.diskStorage({
+//     destination: function (req, file, callback) { callback(null, 'uploads/'); },
+//     filename: function (req, file, callback) { callback(null, file.originalname + '-' + Date.now() + path.extname(file.originalname)) }
+// })
+const upload = multer({ storage: multer.memoryStorage() })
 
 
 app.get('/', (req, res) => {
@@ -43,11 +44,11 @@ app.post('/upload', upload.single('testfile') , async (req, res) => {
     // res.render('display', {message: 'Processing. Please wait'});  
     console.log("starting function\n");  
 
-    const ouput = await llmController.CodeAnalysis(file.path);
+    const output = await llmController.CodeAnalysis(file.buffer);
 
-    console.log("ouput: ");
+    // console.log("ouput: ");
   
-    res.render('display', { analysis: ouput });
+    res.render('display', { analysis: output });
 })
 
 

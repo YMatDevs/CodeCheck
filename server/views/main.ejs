@@ -91,21 +91,25 @@
                 </div>
                 <form action="/upload" method="post" enctype="multipart/form-data" id="uploadForm">
                     <div class="modal-body">
-                        <p class="text-muted mb-3">Select a code file or a compressed folder (.zip, .tar) to begin the analysis.</p>
-                        
+                        <p class="text-muted mb-3">
+                        Select up to <strong>5 code files</strong> to begin the analysis.
+                        </p>
+
                         <div class="mb-3">
-                            <label for="projectNameInput" class="form-label">Project Name</label>
-                            <input class="form-control" type="text" name="projectName" id="projectNameInput" required>
+                        <label for="projectNameInput" class="form-label">Project Name</label>
+                        <input class="form-control" type="text" name="projectName" id="projectNameInput" required>
                         </div>
 
                         <div class="mb-3">
-                            <label for="fileInput" class="form-label">File to Upload</label>
-                            <input class="form-control" type="file" name="testfile" id="fileInput" required>
+                        <label for="fileInput" class="form-label">Files to Upload (max 5)</label>
+                        <input class="form-control" type="file" name="testfile" id="fileInput" required multiple>
+                        <small class="text-muted">You can select up to 5 files.</small>
                         </div>
                     </div>
+
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button class="btn btn-primary" type="submit">Upload & Analyze</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="cancelButton">Cancel</button>
+                        <button class="btn btn-primary" type="submit" id="submitButton" >Upload & Analyze</button>
                     </div>
                 </form>
             </div>
@@ -113,5 +117,22 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', function (e) {
+            const fileInput = document.getElementById('fileInput');
+            if (fileInput.files.length > 5) {
+                e.preventDefault();
+                alert('You can only upload a maximum of 5 files.');
+            }
+
+            const submitButton = document.getElementById('submitButton');
+            const cancelButton = document.getElementById('cancelButton');
+            submitButton.disabled = true;
+            cancelButton.style.display = 'none';
+            submitButton.innerHTML = ' <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Analyzing...';
+ 
+
+        });
+    </script>
 </body>
 </html>

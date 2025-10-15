@@ -9,6 +9,7 @@ import cookieParser from 'cookie-parser'
 
 // Importing Controllers
 import llmController from './Controller/Llm.js';
+import { report } from 'process';
 
 dotenv.config();
 
@@ -34,6 +35,10 @@ app.use(cookieParser());
 // Serving Static files
 app.use(express.static('public'))
 
+const flags = {
+  message: null
+}
+
 
 
 
@@ -49,25 +54,30 @@ async function fetchRecords()
   return data;
 }
 
+app.get('/loading', (req, res) => { res.render('loading') });
 
 app.get('/', async (req, res) => {
 
   const data = await fetchRecords();
 
-  res.render('main', { reports: data}) 
+  res.render('main', { reports: data, flags: flags}) 
+
+  flags.message = null;
 });
 
-app.post('/upload', upload.single('testfile') , async (req, res) => {
+app.post('/upload', upload.array('testfile', 10) , async (req, res) => {
     
-    const file = req.file;
+    const files = req.files;  
     const projectName = req.body.projectName;
-    const fileBuffer = file.buffer;
+    // const fileBuffer = files.buffer;
 
-    const output = await llmController.CodeAnalysis(file.buffer);
+    const output = await llmController.CodeAnalysis(projectName, files);
+
+    if(output.error) { flags.message = output.error; res.redirect('/'); return; }
   
-    const { error } = await supbaseClient.from('records').insert({ project_name: projectName, report: output });
+    const { error } = await supbaseClient.from('records').insert({ project_name: projectName, report: output.cleanResult });
 
-    if(error) console.log("error: ", error);
+    if(error) { flags.message = "There was an error with the Database."; res.redirect('/'); return; }
 
     const data = fetchRecords();
     

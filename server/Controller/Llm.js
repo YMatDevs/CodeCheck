@@ -1,61 +1,212 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import fs, { readFileSync } from 'fs';
+import path from 'path';
 
 import dotenv from 'dotenv';
+import { error } from 'console';
 
 dotenv.config();
 
 const API_KEY = process.env.GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY);
 
-async function CodeAnalysis(fileContent) {
 
-    // const fileContent = file.buffer;
+const allowedExtensions = new Set([
+    // Web Development (JavaScript Ecosystem)
+    '.js',      // JavaScript
+    '.jsx',     // JavaScript XML (React)
+    '.ts',      // TypeScript
+    '.tsx',     // TypeScript XML (React)
+    '.mjs',     // ECMAScript Module
+    '.cjs',     // CommonJS Module
+    '.vue',     // Vue.js Single File Component
+    '.svelte',  // Svelte Component
+    '.astro',   // Astro Component
 
-    const query = `
-  Analyze the following code.
-  Your response must be a valid JSON object following this schema:
-  
-  {
-    "summary": "A brief overview of the code's quality.",
-    "best_practices": {
-      "comments": "Comments on following best practices.",
-      "suggestions": "Suggestions to improve best practices."
-    },
-    "quality_of_code": {
-      "comments": "Comments on code quality (readability, efficiency, etc.).",
-      "suggestions": "Suggestions to improve code quality."
-    }
-  }
+    // Web Development (HTML/CSS)
+    '.html',    // HyperText Markup Language
+    '.htm',     // HyperText Markup Language (alternative)
+    '.css',     // Cascading Style Sheets
+    '.scss',    // Sassy CSS (Sass)
+    '.sass',    // Syntactically Awesome Style Sheets (Sass)
+    '.less',    // Leaner Style Sheets
 
-  Do not include any additional text, explanations, or code blocks outside the JSON object.
-  \n${fileContent}
-`;
+    // General Purpose & Backend
+    '.py',      // Python
+    '.java',    // Java
+    '.kt',      // Kotlin
+    '.kts',     // Kotlin Script
+    '.scala',   // Scala
+    '.groovy',  // Groovy
+    '.cs',      // C#
+    '.go',      // Go
+    '.rs',      // Rust
+    '.rb',      // Ruby
+    '.php',     // PHP
+    '.phtml',   // PHP HTML
+    '.swift',   // Swift
+    '.dart',    // Dart
+    '.lua',     // Lua
+    '.pl',      // Perl
+    '.pm',      // Perl Module
+    
+    // Systems Programming (C/C++)
+    '.c',       // C
+    '.h',       // C/C++ Header
+    '.cpp',     // C++
+    '.hpp',     // C++ Header
+    '.cxx',     // C++ (alternative)
+    '.hxx',     // C++ Header (alternative)
+    '.cc',      // C++ (alternative)
+    '.hh',      // C++ Header (alternative)
+
+    // Data Science & Machine Learning
+    '.ipynb',   // Jupyter Notebook
+    '.r',       // R
+    '.rmd',     // R Markdown
+    '.jl',      // Julia
+    '.m',       // MATLAB / Objective-C
+    '.sql',     // Structured Query Language
+
+    // Functional Programming
+    '.hs',      // Haskell
+    '.lhs',     // Literate Haskell
+    '.elm',     // Elm
+    '.fs',      // F#
+    '.fsx',     // F# Script
+    '.fsi',     // F# Interface
+    '.clj',     // Clojure
+    '.cljs',    // ClojureScript
+    '.cljc',    // Clojure/ClojureScript
+    '.erl',     // Erlang
+    '.ex',      // Elixir
+    '.exs',     // Elixir Script
+    '.lisp',    // Lisp
+    '.rkt',     // Racket
+    '.ml',      // OCaml
+    '.mli',     // OCaml Interface
+    
+    // Scripting & Shell
+    '.sh',      // Shell Script
+    '.bash',    // Bash Script
+    '.zsh',     // Zsh Script
+    '.ps1',     // PowerShell Script
+    '.bat',     // Windows Batch File
+    '.cmd',     // Windows Command Script
+    
+    // Configuration & Data Formats
+    '.json',    // JavaScript Object Notation
+    '.jsonc',   // JSON with Comments
+    '.yaml',    // YAML Ain't Markup Language
+    '.yml',     // YAML (alternative)
+    '.xml',     // eXtensible Markup Language
+    '.toml',    // Tom's Obvious, Minimal Language
+    '.ini',     // Initialization File
+    '.env',     // Environment Variables
+    '.cfg',     // Configuration File
+    '.conf',    // Configuration File
+    '.md',      // Markdown
+    
+    // Build & Tooling
+    '.dockerfile', // Dockerfile
+    '.gitignore',  // Git Ignore File
+    '.gradle',     // Gradle Script
+    '.cmake',      // CMake File
+    'Makefile',    // Makefile (often has no extension)
+    
+    // Shader Languages
+    '.glsl',    // OpenGL Shading Language
+    '.frag',    // Fragment Shader
+    '.vert',    // Vertex Shader
+    '.hlsl',    // High-Level Shading Language
+    '.wgsl',    // WebGPU Shading Language
+    
+    // Other Niche/System Languages
+    '.asm',     // Assembly Language
+    '.s',       // Assembly Language
+    '.zig',     // Zig
+    '.nim',     // Nim
+    '.cr',      // Crystal
+    '.v',       // V
+    '.pas',     // Pascal
+]);
+
+const getQuery = (fileContent) => {
+
+return `
+
+        You will analyze a multi-file codebase. The combined content of multiple related files is provided below.
+
+        Your task:
+        1. Understand how the project works as a whole.
+        2. Identify relationships and flow of control between files.
+        3. Provide constructive, technically accurate feedback for both the entire project and each file individually.
+
+        Note: You do not need to give very long answers, you can give answers to the point. If the file content is small in size then you can give answer in more detail
+
+        Your response must be a single valid JSON object that follows this exact schema:
+
+        {
+          "summary": "A concise overview of the project's purpose and functionality.",
+          "flow": "Explain the flow of control between files and how they work together to achieve the overall functionality.",
+          "project_comments": "General feedback about the project's structure, maintainability, scalability, and overall quality.",
+          "files": [
+            {
+              "filename": "Name of the file",
+              "summary": "A brief description of this files purpose and role within the project.",
+              "comments": "Detailed comments and suggestions about this files code quality, maintainability, readability, and logical structure. Mention any issues or strengths you notice.",
+              "best_practices": "Suggest best practices or improvements specific to this file (naming conventions, modularity, error handling, etc.)."
+            }
+          ]
+        }
+
+        Rules:
+        - Your output must be *strictly valid JSON (no code blocks, explanations, or extra text).
+        - If you mention code, do not wrap it in markdown fences.
+        - Ensure the structure strictly matches the schema above.
+
+        Now analyze the following files:
+
+        ${fileContent}
+        `;
+
+}
+
+
+async function CodeAnalysis(projectName, files) {
 
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
 
-    const result = await model.generateContent(query);
+    const allContent = files
+        .filter(file => {
+            const fileExtension = path.extname(file.originalname).toLowerCase();
+            return allowedExtensions.has(fileExtension);
+        })
+        .map(file => {
+            const fileContent = file.buffer.toString('utf-8');
+            return `File Name: ${file.originalname}\nFile Content:\n${fileContent}`;
+        })
+        .join("\n\n---\n\n"); 
+
+    let answer = { cleanResult: {}, error: null } 
+
+    
+    if (!allContent) {
+        console.log("No valid code files found to analyze.");
+        answer.error = "No valid code files found to analyze.";
+        return answer;
+    }
+
+
+    const result = await model.generateContent(getQuery(allContent));
+
+
 
 
     const textResult = result.response.text();
     const cleanResult = textResult.replace(/```json\n|```/g, '').trim();
+    answer.cleanResult = JSON.parse(cleanResult);
 
-  //   const cleanResult = {
-  //   summary: 'The HTML code presents a simple, well-structured landing page for a game. It uses CSS for styling and provides a basic description, controls, and a download link.',
-  //   best_practices: {
-  //     comments: 'The code is generally well-formatted and easy to read. The use of semantic HTML elements (e.g., `<h1>`, `<h2>`, `<footer>`) is good. The CSS is contained within the `<style>` tags, which is acceptable for a small project like this, but in a larger project, an external CSS file is recommended.  The use of appropriate meta tags (e.g., `<meta charset="UTF-8">`, `<meta name="viewport" ...>`) is present.',        
-  //     suggestions: 'For larger projects, move the CSS to an external file to improve maintainability and organization. Consider adding a `<meta name="description" content="...">` tag to improve SEO. Consider using a CSS framework (like Bootstrap or Tailwind) for more advanced styling and quicker development.'
-  //   },
-  //   quality_of_code: {
-  //     comments: 'The code is readable and uses a clean structure. The CSS is well-organized, with clear selectors and properties. The use of a linear gradient for the download button creates a visually appealing effect. The use of `no-repeat`, `center center`, and `fixed` in `background` property is appropriate for a tiled background image. The color choices are good for a space-themed game landing page.',
-  //     suggestions: 'While the code is good for a small landing page, consider adding comments to the CSS to explain more complex styling rules. Use more descriptive class names to improve clarity (e.g., `downloadButton` instead of `download-btn`). Consider adding a favicon for the webpage.'
-  //   }
-  // }
-
-
-    return JSON.parse(cleanResult);
-    // return cleanResult;
-
+    return answer;
 }
 
 export default { CodeAnalysis };

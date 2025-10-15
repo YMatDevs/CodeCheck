@@ -3,8 +3,6 @@ import dotenv from 'dotenv';
 import morgan from 'morgan';
 import multer from 'multer';
 import { createClient } from '@supabase/supabase-js';
-import admin from "firebase-admin";
-import serviceAccount from './firbase-privateKey.json' with { type: "json" };
 import cookieParser from 'cookie-parser'
 
 

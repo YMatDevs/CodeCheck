@@ -4,6 +4,10 @@ An AI-powered web tool that analyzes user-submitted code files to provide detail
 
 ---
 
+## Project Deliverables
+
+* Website Link: [https://codecheck-em4z.onrender.com/](https://codecheck-em4z.onrender.com/)
+
 ## About The Project
 
 Code Check is designed to help developers improve their code by leveraging the analytical power of large language models. Users can upload up to five source code files for a single project. The system processes these files, understands the context and dependencies, and generates a comprehensive analysis report. These reports are stored for future reference, allowing users to track their improvements over time.
@@ -42,5 +46,5 @@ Code Check is designed to help developers improve their code by leveraging the a
 ## Author
 
 * **Yash Mathur**
-    * GitHub: `[https://github.com/YMatDevs]`
-    * Email: `[yash.mathur797@gmail.com]`
+    * GitHub: [github.com/YMatDevs](https://github.com/YMatDevs)
+    * Email: [yash.mathur797@gmail.com](yash.mathur797@gmail.com)

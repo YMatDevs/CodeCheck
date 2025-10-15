@@ -36,67 +36,70 @@ app.use(cookieParser());
 // Serving Static files
 app.use(express.static('public'))
 
-// Initialize Firebase
-admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
 
-// Auth Function
-function checkSession(req, res, next) {
-  const sessionCookie = req.cookies?.session;
-  if (!sessionCookie) return res.redirect("/auth"); 
 
-  admin.auth().verifySessionCookie(sessionCookie, true)
-    .then(decodedClaims => {
-      req.user = decodedClaims;
-      next();
-    })
-    .catch(err => {
-      console.log("Unauthorized:", err);
-      res.redirect("/auth"); 
-    });
+
+// Fetching Records
+async function fetchRecords()
+{
+  const { data, error } = await supbaseClient.from('records').select();
+
+  if(error) console.log(error);
+
+  if(!data) return [];
+
+  return data;
 }
-app.post("/sessionLogin", async (req, res) => {
-  const idToken = req.body?.idToken;
 
-  if (!idToken) return res.status(400).json({ error: "No ID token provided" });
 
-  try {
-    const expiresIn = 60 * 60 * 2 * 1000; // 2 hours
-    const sessionCookie = await admin.auth().createSessionCookie(idToken, { expiresIn });
+app.get('/', async (req, res) => {
 
-    res.cookie("session", sessionCookie, { maxAge: expiresIn, httpOnly: true });
-    res.status(200).json({ status: "success" });
-  } catch (err) {
-    console.error(err);
-    res.status(401).json({ error: "Failed to create session" });
-  }
+  const data = await fetchRecords();
+
+  res.render('main', { reports: data}) 
 });
 
-
-app.get("/logout", (req, res) => {
-  res.clearCookie("session");
-  res.redirect("/auth");
-});
-
-app.get('/auth', (req, res) => res.render('auth'));
-
-app.get('/', checkSession, (req, res) => res.render('main') );
-
-app.post('/upload', checkSession, upload.single('testfile') , async (req, res) => {
+app.post('/upload', upload.single('testfile') , async (req, res) => {
     
     const file = req.file;
+    const projectName = req.body.projectName;
     const fileBuffer = file.buffer;
-    const fileName = `${file.originalname}`;
 
-    const { data, error } = await supbaseClient.storage.from('CodeBucket').upload(`${fileName}`, { upsert: true, contentType: file.mimetype });
-    if(error) throw error;
-
-    // const output = await llmController.CodeAnalysis(file.buffer);
-
-    // console.log("ouput: ");
+    const output = await llmController.CodeAnalysis(file.buffer);
   
-    // res.render('display', { analysis: output });
+    const { error } = await supbaseClient.from('records').insert({ project_name: projectName, report: output });
 
-    res.render('main');
+    if(error) console.log("error: ", error);
+
+    const data = fetchRecords();
+    
+    res.redirect('/');
+
+})
+
+app.get(`/reports/:id`, async (req, res) => {
+
+  const id = req.params.id;
+  
+
+  const { data, error } = await supbaseClient.from('records').select().eq('id', id);
+
+  // console.log("display: ", data[0].report);
+  
+  res.render('display', { analysis: data[0].report })
+})
+
+app.post('/api/deleteRecord', async(req, res) => {
+  const id = req.body.id;
+
+  console.log("id: ", id);
+
+  const response = await supbaseClient.from('records').delete().eq('id', id);
+
+  console.log("response: ", response);
+
+  res.redirect('/');
+
 })
 
 
